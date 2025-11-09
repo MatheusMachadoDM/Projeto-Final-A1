@@ -7,15 +7,18 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ReservaDao {
 
-    @Query("SELECT * FROM reservas")
-    fun listarReservas(): Flow<List<Reserva>>
+    @Query("SELECT * FROM reserva ORDER BY dataCheckIn ASC")
+    fun getAllReservas(): Flow<List<Reserva>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun inserir(reserva: Reserva)
+    suspend fun insertReserva(reserva: Reserva)
 
     @Update
-    suspend fun atualizar(reserva: Reserva)
+    suspend fun updateReserva(reserva: Reserva)
 
     @Delete
-    suspend fun deletar(reserva: Reserva)
+    suspend fun deleteReserva(reserva: Reserva)
+
+    @Query("SELECT * FROM reserva WHERE id = :id LIMIT 1")
+    suspend fun getReservaById(id: String): Reserva?
 }

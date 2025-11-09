@@ -1,58 +1,79 @@
-package com.example.reservashotel.viewmodel
+package com.example.reservashotel.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.reservashotel.model.Reserva
-import com.example.reservashotel.repository.ReservaRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import com.example.reservashotel.data.model.Reserva
+import com.example.reservashotel.data.repository.ReservasRepository
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class ReservaViewModel(
-    private val repository: ReservaRepository = ReservaRepository()
-) : ViewModel() {
+class ReservaViewModel(private val repository: ReservasRepository) : ViewModel() {
 
-    private val _reservas = MutableStateFlow<List<Reserva>>(emptyList())
-    val reservas: StateFlow<List<Reserva>> = _reservas
+    // Expõe a lista como StateFlow, observando o repositório (correto para Compose)
+    val listaReservas = repository.getAllReservas()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
-    private val _status = MutableStateFlow<String?>(null)
-    val status: StateFlow<String?> = _status
-
-    init {
-        carregarReservas()
-    }
-
-    fun carregarReservas() {
+    /**
+     * Salva (cria ou atualiza) uma reserva.
+     * Constrói o objeto Reserva antes de chamar o Repositório.
+     */
+    fun salvarReserva(
+        id: String? = null,
+        quartoId: String,
+        hospedeId: String,
+        nomeCliente: String,
+        dataCheckIn: Long,
+        dataCheckOut: Long,
+        status: String
+    ) {
         viewModelScope.launch {
-            repository.listarReservas { lista ->
-                _reservas.value = lista
+            // 1. CONSTRÓI O OBJETO RESERVA AQUI
+            val reserva = Reserva(
+                id = id ?: "",
+                quartoId = quartoId,
+                hospedeId = hospedeId,
+                nomeCliente = nomeCliente,
+                dataCheckIn = dataCheckIn,
+                dataCheckOut = dataCheckOut,
+                status = status
+            )
+
+            // 2. DELEGA A LÓGICA DE PERSISTÊNCIA AO REPOSITÓRIO
+            if (id.isNullOrBlank()) {
+                repository.addReserva(reserva)
+            } else {
+                repository.updateReserva(reserva)
             }
+
+            // NOTA: A validação de conflito de datas (RF12) deve vir aqui antes de salvar
         }
     }
 
-    fun salvarReserva(reserva: Reserva) {
+    fun excluirReserva(reserva: Reserva) {
         viewModelScope.launch {
-            repository.salvarReserva(reserva) { sucesso ->
-                if (sucesso) {
-                    _status.value = "Reserva salva com sucesso!"
-                    carregarReservas()
-                } else {
-                    _status.value = "Erro ao salvar reserva"
-                }
-            }
+            repository.deleteReserva(reserva)
         }
     }
 
-    fun excluirReserva(id: String) {
-        viewModelScope.launch {
-            repository.excluirReserva(id) { sucesso ->
-                if (sucesso) {
-                    _status.value = "Reserva excluída!"
-                    carregarReservas()
-                } else {
-                    _status.value = "Erro ao excluir reserva"
-                }
+    // Função de carregamento para a tela de edição
+    suspend fun carregarReservaPorId(id: String): Reserva? {
+        return repository.getReservaById(id)
+    }
+
+    // Factory
+    class Factory(private val repository: ReservasRepository) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(ReservaViewModel::class.java)) {
+                @Suppress("UNCHECKED_CAST")
+                return ReservaViewModel(repository) as T
             }
+            throw IllegalArgumentException("Unknown ViewModel class")
         }
     }
 }
