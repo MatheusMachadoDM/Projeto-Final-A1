@@ -1,5 +1,7 @@
 package com.example.reservashotel.ui.view.screens
-
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -7,8 +9,33 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.reservashotel.ui.viewmodel.ReservaViewModel
-import java.text.SimpleDateFormat
-import java.util.*
+
+// =========================================================================
+// FUNÇÕES AUXILIARES (DE FORA DO @Composable)
+// =========================================================================
+
+fun parseDateStringToMillis(dateStr: String): Long {
+    return try {
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val date = sdf.parse(dateStr)
+        date?.time ?: 0L
+    } catch (e: Exception) {
+        0L
+    }
+}
+
+fun formatMillisToDateString(millis: Long): String {
+    return try {
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        sdf.format(Date(millis))
+    } catch (e: Exception) {
+        ""
+    }
+}
+
+// =========================================================================
+// TELA COMPOSABLE
+// =========================================================================
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -17,6 +44,7 @@ fun FormReservaScreen(
     viewModel: ReservaViewModel,
     reservaId: String? = null
 ) {
+    // ESTADOS DOS CAMPOS (serão preenchidos se for edição)
     var quartoId by remember { mutableStateOf("") }
     var hospedeId by remember { mutableStateOf("") }
     var nomeCliente by remember { mutableStateOf("") }
@@ -24,9 +52,33 @@ fun FormReservaScreen(
     var dataCheckOut by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("ativa") }
 
-    // opcional: carregar reserva existente se reservaId != null (pode ser adicionada)
-    // exemplo simples: scope launch { val r = viewModel.carregarReservaPorId(reservaId!!); preencher campos }
+    // VARIÁVEL DE CONTROLE para evitar que o carregamento se repita
+    val dadosCarregados = remember { mutableStateOf(false) }
 
+    val scope = rememberCoroutineScope() // CoroutineScope, embora LaunchEffect já crie um, é bom para consistência.
+
+    // LÓGICA DE CARREGAMENTO DE DADOS (USANDO LaunchedEffect)
+    LaunchedEffect(reservaId, dadosCarregados.value) {
+        // Se estamos em modo de edição E os dados ainda não foram carregados...
+        if (reservaId != null && !dadosCarregados.value) {
+            // Chamada de suspensão dentro do LaunchedEffect
+            val reservaExistente = viewModel.carregarReservaPorId(reservaId)
+
+            // Se a reserva for encontrada, preenche os estados
+            reservaExistente?.let { reserva ->
+                quartoId = reserva.quartoId
+                hospedeId = reserva.hospedeId
+                nomeCliente = reserva.nomeCliente
+                dataCheckIn = formatMillisToDateString(reserva.dataCheckIn)
+                dataCheckOut = formatMillisToDateString(reserva.dataCheckOut)
+                status = reserva.status
+
+                dadosCarregados.value = true // Marca como carregado
+            }
+        }
+    }
+
+    // ESTRUTURA DA UI
     Scaffold(
         topBar = {
             TopAppBar(title = { Text(if (reservaId == null) "Nova Reserva" else "Editar Reserva") })
@@ -39,6 +91,11 @@ fun FormReservaScreen(
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+
+            // =========================
+            // CAMPOS DE TEXTO
+            // =========================
+
             OutlinedTextField(
                 value = quartoId,
                 onValueChange = { quartoId = it },
@@ -77,11 +134,15 @@ fun FormReservaScreen(
             OutlinedTextField(
                 value = status,
                 onValueChange = { status = it },
-                label = { Text("Status (ativa/concluída/cancelada)") },
+                label = { Text("Status (Ativa/Concluída/Cancelada)") },
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(12.dp))
+
+            // =========================
+            // BOTÃO SALVAR
+            // =========================
 
             Button(
                 onClick = {
@@ -89,12 +150,13 @@ fun FormReservaScreen(
                     val outMillis = parseDateStringToMillis(dataCheckOut)
 
                     if (nomeCliente.isBlank() || quartoId.isBlank() || inMillis == 0L || outMillis == 0L) {
-                        // mostrar validação (Snackbar/Toast)
+                        // (Adicionar lógica de validação aqui, ex: um Snackbar)
                         return@Button
                     }
 
+                    // Chama a função de salvar no ViewModel
                     viewModel.salvarReserva(
-                        id = reservaId,
+                        id = reservaId, // Se for edição, o ID é passado; se for novo, é null
                         quartoId = quartoId,
                         hospedeId = hospedeId,
                         nomeCliente = nomeCliente,
@@ -110,15 +172,5 @@ fun FormReservaScreen(
                 Text("Salvar")
             }
         }
-    }
-}
-
-fun parseDateStringToMillis(dateStr: String): Long {
-    return try {
-        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val date = sdf.parse(dateStr)
-        date?.time ?: 0L
-    } catch (e: Exception) {
-        0L
     }
 }

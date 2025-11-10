@@ -17,4 +17,8 @@ class QuartosRepository(private val quartoDao: QuartoDao) {
     suspend fun excluirQuarto(quarto: Quarto) {
         quartoDao.delete(quarto)
     }
+
+    suspend fun getQuartoById(id: String): Quarto? {
+        return quartoDao.getQuartoById(id.toString())
+    }
 }

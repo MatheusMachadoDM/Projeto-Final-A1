@@ -6,7 +6,6 @@ import com.example.reservashotel.data.model.Quarto
 import com.example.reservashotel.data.repository.QuartosRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 class QuartoViewModel(private val repository: QuartosRepository) : ViewModel() {
@@ -82,5 +81,9 @@ class QuartoViewModel(private val repository: QuartosRepository) : ViewModel() {
             }
             throw IllegalArgumentException("Classe ViewModel desconhecida")
         }
+    }
+
+    suspend fun carregarQuartoPorId(id: String): Quarto? {
+        return repository.getQuartoById(id)
     }
 }

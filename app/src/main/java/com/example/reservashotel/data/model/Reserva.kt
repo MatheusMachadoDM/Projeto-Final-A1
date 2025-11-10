@@ -3,7 +3,7 @@ package com.example.reservashotel.data.model
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "reservas")
+@Entity(tableName = "reserva")
 data class Reserva(
     @PrimaryKey
     val id: String = "",       // String para casar com Firestore docId / UUID
