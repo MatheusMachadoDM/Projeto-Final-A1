@@ -19,7 +19,4 @@ interface QuartoDao {
 
     @Delete
     suspend fun delete(quarto: Quarto)
-
-    @Query("SELECT * FROM quartos WHERE id = :quartoId")
-    suspend fun getQuartoById(quartoId: String): Quarto?
 }
