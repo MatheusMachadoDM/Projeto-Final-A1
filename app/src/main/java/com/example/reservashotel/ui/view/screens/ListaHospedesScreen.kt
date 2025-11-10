@@ -14,25 +14,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.reservashotel.ui.viewmodel.ReservaViewModel
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.example.reservashotel.ui.viewmodel.HospedeViewModel
+import com.example.reservashotel.data.model.Hospede // Certifique-se de ter este import
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-fun ListaReservasScreen(
+fun ListaHospedesScreen(
     navController: NavController,
-    viewModel: ReservaViewModel
+    viewModel: HospedeViewModel
 ) {
-    val reservas by viewModel.listaReservas.collectAsState()
+    val listaHospedes by viewModel.listaHospedes.collectAsState()
 
     Scaffold(
-        // 1. TOP BAR COM BOTÃO DE VOLTAR
         topBar = {
             TopAppBar(
-                title = { Text("Reservas") },
-                // Botão de voltar no canto superior esquerdo
+                title = { Text("Hóspedes") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
@@ -40,16 +36,12 @@ fun ListaReservasScreen(
                             contentDescription = "Voltar para a página principal"
                         )
                     }
-                },
-                actions = {
-                    // Removemos o botão 'Nova' daqui, ele vai para o FAB
                 }
             )
         },
-        // 2. FLOATING ACTION BUTTON (FAB) na parte inferior
         floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate("form_reserva") }) {
-                Icon(Icons.Filled.Add, contentDescription = "Adicionar Nova Reserva")
+            FloatingActionButton(onClick = { navController.navigate("form_hospede") }) {
+                Icon(Icons.Filled.Add, contentDescription = "Adicionar Novo Hóspede")
             }
         }
     ) { padding ->
@@ -58,9 +50,9 @@ fun ListaReservasScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (reservas.isEmpty()) {
+            if (listaHospedes.isEmpty()) {
                 Text(
-                    text = "Nenhuma reserva encontrada.",
+                    text = "Nenhum hóspede cadastrado.",
                     modifier = Modifier.align(Alignment.Center)
                 )
             } else {
@@ -70,25 +62,30 @@ fun ListaReservasScreen(
                         .padding(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(reservas) { reserva ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
+                    items(listaHospedes) { hospede ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(4.dp)
+                        ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                Text("Cliente: ${reserva.nomeCliente}", style = MaterialTheme.typography.titleMedium)
-                                Text("Quarto ID: ${reserva.quartoId}")
-                                Text("Check-in: ${formatMillisToDate(reserva.dataCheckIn)}")
-                                Text("Check-out: ${formatMillisToDate(reserva.dataCheckOut)}")
-                                Text("Status: ${reserva.status}")
+                                Text("Nome: ${hospede.nome}", style = MaterialTheme.typography.titleMedium)
+                                Text("CPF: ${hospede.cpf}")
+                                Text("Telefone: ${hospede.telefone}")
 
                                 Spacer(modifier = Modifier.height(8.dp))
+
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Button(
-                                        // Navega para a tela de formulário, passando o ID da reserva
-                                        onClick = { navController.navigate("form_reserva?id=${reserva.id}") }
+                                        // Passa o ID do hóspede como string para a tela de formulário
+                                        onClick = { navController.navigate("form_hospede?id=${hospede.id}") },
+                                        modifier = Modifier.weight(1f)
                                     ) {
                                         Text("Editar")
                                     }
                                     Button(
-                                        onClick = { viewModel.excluirReserva(reserva) }
+                                        onClick = { viewModel.excluirHospede(hospede) },
+                                        modifier = Modifier.weight(1f)
                                     ) {
                                         Text("Excluir")
                                     }
@@ -99,15 +96,5 @@ fun ListaReservasScreen(
                 }
             }
         }
-    }
-}
-
-fun formatMillisToDate(millis: Long): String {
-    return try {
-        if (millis <= 0L) return ""
-        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        sdf.format(Date(millis))
-    } catch (e: Exception) {
-        ""
     }
 }

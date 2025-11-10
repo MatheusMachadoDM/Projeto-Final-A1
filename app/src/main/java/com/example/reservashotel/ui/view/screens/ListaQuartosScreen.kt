@@ -3,6 +3,9 @@ package com.example.reservashotel.ui.view.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,18 +21,32 @@ fun ListaQuartosScreen(
     navController: NavController,
     viewModel: QuartoViewModel
 ) {
+    // Coleta a lista de quartos de forma reativa
     val listaQuartos by viewModel.listaQuartos.collectAsState()
 
     Scaffold(
+        // 1. TOP BAR COM BOTÃO DE VOLTAR
         topBar = {
             TopAppBar(
                 title = { Text("Quartos") },
-                actions = {
-                    Button(onClick = { navController.navigate("form_quarto") }) {
-                        Text("Novo")
+                // Adiciona o ícone de voltar no canto superior esquerdo
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = "Voltar para a página principal"
+                        )
                     }
-                }
+                },
+                // Remove o botão "Novo" daqui
+                actions = { /* Deixado vazio ou para outras ações */ }
             )
+        },
+        // 2. FLOATING ACTION BUTTON (FAB) na parte inferior
+        floatingActionButton = {
+            FloatingActionButton(onClick = { navController.navigate("form_quarto") }) {
+                Icon(Icons.Filled.Add, contentDescription = "Adicionar Novo Quarto")
+            }
         }
     ) { padding ->
         Box(
@@ -58,6 +75,7 @@ fun ListaQuartosScreen(
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text("Número: ${quarto.numero}", style = MaterialTheme.typography.titleMedium)
                                 Text("Tipo: ${quarto.tipo}")
+                                // Formatar para moeda seria uma boa prática
                                 Text("Valor diária: R$${quarto.valorDiaria}")
                                 Text("Status: ${quarto.status}")
 
@@ -65,6 +83,7 @@ fun ListaQuartosScreen(
 
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Button(
+                                        // Navega para a tela de formulário, passando o ID do quarto para edição
                                         onClick = { navController.navigate("form_quarto?id=${quarto.id}") },
                                         modifier = Modifier.weight(1f)
                                     ) {

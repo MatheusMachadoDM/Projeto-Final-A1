@@ -48,6 +48,16 @@ fun HomeScreen(navController: NavController) {
             ) {
                 Text("Gerenciar Reservas")
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 🌟 NOVO BOTÃO PARA A TELA DE HÓSPEDES
+            Button(
+                onClick = { navController.navigate("lista_hospedes") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Gerenciar Hóspedes")
+            }
         }
     }
 }

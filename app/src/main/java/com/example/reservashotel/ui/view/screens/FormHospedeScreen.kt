@@ -8,22 +8,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.reservashotel.ui.viewmodel.QuartoViewModel
-import com.example.reservashotel.data.model.Quarto // Importe sua classe de modelo Quarto
+import com.example.reservashotel.ui.viewmodel.HospedeViewModel
+import com.example.reservashotel.data.model.Hospede // Certifique-se de que este import está correto
 import kotlinx.coroutines.launch
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-fun FormQuartoScreen(
+fun FormHospedeScreen(
     navController: NavController,
-    viewModel: QuartoViewModel,
-    quartoId: String? = null
+    viewModel: HospedeViewModel,
+    hospedeId: String? = null
 ) {
     // ESTADOS DOS CAMPOS
-    var numero by remember { mutableStateOf("") }
-    var tipo by remember { mutableStateOf("") }
-    var valorDiaria by remember { mutableStateOf("") }
-    var status by remember { mutableStateOf("Disponível") }
+    var nome by remember { mutableStateOf("") }
+    var cpf by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var telefone by remember { mutableStateOf("") }
 
     // Variável de controle para garantir que o carregamento só ocorra uma vez
     val dadosCarregados = remember { mutableStateOf(false) }
@@ -32,18 +32,18 @@ fun FormQuartoScreen(
 
 
     // --- Carregamento de Dados para Edição ---
-    LaunchedEffect(quartoId, dadosCarregados.value) {
-        if (quartoId != null && !dadosCarregados.value) {
+    LaunchedEffect(hospedeId, dadosCarregados.value) {
+        if (hospedeId != null && !dadosCarregados.value) {
             scope.launch {
-                // Supondo que você tem esta função no QuartoViewModel
-                val quartoExistente = viewModel.carregarQuartoPorId(quartoId)
+                // Presumimos que o ViewModel tem a função carregarHospedePorId(id: String)
+                val hospedeExistente = viewModel.carregarHospedePorId(hospedeId)
 
-                quartoExistente?.let { quarto ->
+                hospedeExistente?.let { hospede ->
                     // Preenche os estados com os dados carregados
-                    numero = quarto.numero.toString()
-                    tipo = quarto.tipo
-                    valorDiaria = quarto.valorDiaria.toString()
-                    status = quarto.status
+                    nome = hospede.nome
+                    cpf = hospede.cpf
+                    email = hospede.email
+                    telefone = hospede.telefone
 
                     dadosCarregados.value = true // Marca como carregado
                 }
@@ -56,7 +56,7 @@ fun FormQuartoScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (quartoId == null) "Novo Quarto" else "Editar Quarto") },
+                title = { Text(if (hospedeId == null) "Novo Hóspede" else "Editar Hóspede") },
                 // 🌟 NOVO: Botão de Cancelar/Voltar (Navigation Icon)
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
@@ -76,57 +76,53 @@ fun FormQuartoScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-
-            // ... (Campos de Texto) ...
-
+            // Campos de texto...
             OutlinedTextField(
-                value = numero,
-                onValueChange = { numero = it },
-                label = { Text("Número do Quarto") },
+                value = nome,
+                onValueChange = { nome = it },
+                label = { Text("Nome Completo") },
                 modifier = Modifier.fillMaxWidth()
             )
 
             OutlinedTextField(
-                value = tipo,
-                onValueChange = { tipo = it },
-                label = { Text("Tipo (ex: Casal, Solteiro)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Campo valorDiaria
-            OutlinedTextField(
-                value = valorDiaria,
-                onValueChange = { valorDiaria = it },
-                label = { Text("Valor da Diária") },
+                value = cpf,
+                onValueChange = { cpf = it },
+                label = { Text("CPF") },
                 modifier = Modifier.fillMaxWidth()
             )
 
             OutlinedTextField(
-                value = status,
-                onValueChange = { status = it },
-                label = { Text("Status (Disponível/Ocupado)") },
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("E-mail") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = telefone,
+                onValueChange = { telefone = it },
+                label = { Text("Telefone") },
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ... (Botão Salvar) ...
-
+            // Botão Salvar
             Button(
                 onClick = {
-                    // Validação simples de preenchimento e conversão
-                    if (numero.isBlank() || tipo.isBlank() || valorDiaria.toDoubleOrNull() == null) {
-                        // Adicionar lógica de validação aqui
+                    // Validação simples
+                    if (nome.isBlank() || cpf.isBlank() || telefone.isBlank()) {
+                        // Adicionar lógica de validação visual aqui
                         return@Button
                     }
 
-                    viewModel.salvarQuarto(
-                        id = quartoId, // Passa o ID existente para atualizar
-                        numero = numero,
-                        tipo = tipo,
-                        // Converte a String de volta para Double para salvar
-                        valorDiaria = valorDiaria.toDoubleOrNull() ?: 0.0,
-                        status = status
+                    // Chama a função de salvar no ViewModel
+                    viewModel.salvarHospede(
+                        id = hospedeId, // Passa o ID existente para atualização
+                        nome = nome,
+                        cpf = cpf,
+                        email = email,
+                        telefone = telefone
                     )
                     navController.popBackStack()
                 },

@@ -1,14 +1,18 @@
 package com.example.reservashotel.ui.view.screens
+
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.reservashotel.ui.viewmodel.ReservaViewModel
+import com.example.reservashotel.data.model.Reserva // Certifique-se deste import se o seu código usa 'reserva'
 
 // =========================================================================
 // FUNÇÕES AUXILIARES (DE FORA DO @Composable)
@@ -55,16 +59,13 @@ fun FormReservaScreen(
     // VARIÁVEL DE CONTROLE para evitar que o carregamento se repita
     val dadosCarregados = remember { mutableStateOf(false) }
 
-    val scope = rememberCoroutineScope() // CoroutineScope, embora LaunchEffect já crie um, é bom para consistência.
+    val scope = rememberCoroutineScope()
 
     // LÓGICA DE CARREGAMENTO DE DADOS (USANDO LaunchedEffect)
     LaunchedEffect(reservaId, dadosCarregados.value) {
-        // Se estamos em modo de edição E os dados ainda não foram carregados...
         if (reservaId != null && !dadosCarregados.value) {
-            // Chamada de suspensão dentro do LaunchedEffect
             val reservaExistente = viewModel.carregarReservaPorId(reservaId)
 
-            // Se a reserva for encontrada, preenche os estados
             reservaExistente?.let { reserva ->
                 quartoId = reserva.quartoId
                 hospedeId = reserva.hospedeId
@@ -73,7 +74,7 @@ fun FormReservaScreen(
                 dataCheckOut = formatMillisToDateString(reserva.dataCheckOut)
                 status = reserva.status
 
-                dadosCarregados.value = true // Marca como carregado
+                dadosCarregados.value = true
             }
         }
     }
@@ -81,7 +82,18 @@ fun FormReservaScreen(
     // ESTRUTURA DA UI
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(if (reservaId == null) "Nova Reserva" else "Editar Reserva") })
+            TopAppBar(
+                title = { Text(if (reservaId == null) "Nova Reserva" else "Editar Reserva") },
+                // 🌟 NOVO: Botão de Cancelar/Voltar (Navigation Icon)
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = "Cancelar e Voltar"
+                        )
+                    }
+                }
+            )
         }
     ) { padding ->
         Column(
@@ -154,9 +166,8 @@ fun FormReservaScreen(
                         return@Button
                     }
 
-                    // Chama a função de salvar no ViewModel
                     viewModel.salvarReserva(
-                        id = reservaId, // Se for edição, o ID é passado; se for novo, é null
+                        id = reservaId,
                         quartoId = quartoId,
                         hospedeId = hospedeId,
                         nomeCliente = nomeCliente,
