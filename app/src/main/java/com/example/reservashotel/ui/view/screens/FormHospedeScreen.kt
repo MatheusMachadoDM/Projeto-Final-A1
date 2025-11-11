@@ -1,6 +1,7 @@
 package com.example.reservashotel.ui.view.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -9,8 +10,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.reservashotel.ui.viewmodel.HospedeViewModel
-import com.example.reservashotel.data.model.Hospede // Certifique-se de que este import está correto
+import com.example.reservashotel.data.model.Hospede
 import kotlinx.coroutines.launch
+import androidx.compose.ui.text.input.KeyboardType
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -25,27 +27,20 @@ fun FormHospedeScreen(
     var email by remember { mutableStateOf("") }
     var telefone by remember { mutableStateOf("") }
 
-    // Variável de controle para garantir que o carregamento só ocorra uma vez
+    // ... (Lógica de carregamento e estados permanecem iguais) ...
     val dadosCarregados = remember { mutableStateOf(false) }
-
     val scope = rememberCoroutineScope()
 
-
-    // --- Carregamento de Dados para Edição ---
     LaunchedEffect(hospedeId, dadosCarregados.value) {
         if (hospedeId != null && !dadosCarregados.value) {
             scope.launch {
-                // Presumimos que o ViewModel tem a função carregarHospedePorId(id: String)
                 val hospedeExistente = viewModel.carregarHospedePorId(hospedeId)
-
                 hospedeExistente?.let { hospede ->
-                    // Preenche os estados com os dados carregados
                     nome = hospede.nome
                     cpf = hospede.cpf
                     email = hospede.email
                     telefone = hospede.telefone
-
-                    dadosCarregados.value = true // Marca como carregado
+                    dadosCarregados.value = true
                 }
             }
         }
@@ -57,13 +52,9 @@ fun FormHospedeScreen(
         topBar = {
             TopAppBar(
                 title = { Text(if (hospedeId == null) "Novo Hóspede" else "Editar Hóspede") },
-                // 🌟 NOVO: Botão de Cancelar/Voltar (Navigation Icon)
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = "Cancelar e Voltar"
-                        )
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Cancelar e Voltar")
                     }
                 }
             )
@@ -76,7 +67,8 @@ fun FormHospedeScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Campos de texto...
+
+            // 1. Campo Nome (Teclado padrão)
             OutlinedTextField(
                 value = nome,
                 onValueChange = { nome = it },
@@ -84,24 +76,39 @@ fun FormHospedeScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            // 2. Campo CPF
             OutlinedTextField(
                 value = cpf,
-                onValueChange = { cpf = it },
+                onValueChange = {
+                    // DICA: Adicionar um filtro aqui para aceitar APENAS dígitos.
+                    if (it.length <= 11) cpf = it
+                },
                 label = { Text("CPF") },
+                // 🛠️ NOVO: Teclado numérico (ideal para CPF e Telefone)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
 
+            // 3. Campo E-mail
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("E-mail") },
+                // 🛠️ NOVO: Teclado otimizado para e-mail (inclui @ e .)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth()
             )
 
+            // 4. Campo Telefone
             OutlinedTextField(
                 value = telefone,
-                onValueChange = { telefone = it },
+                onValueChange = {
+                    // DICA: Adicionar um filtro aqui para aceitar APENAS dígitos.
+                    telefone = it
+                },
                 label = { Text("Telefone") },
+                // 🛠️ NOVO: Teclado numérico
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -110,15 +117,12 @@ fun FormHospedeScreen(
             // Botão Salvar
             Button(
                 onClick = {
-                    // Validação simples
                     if (nome.isBlank() || cpf.isBlank() || telefone.isBlank()) {
-                        // Adicionar lógica de validação visual aqui
                         return@Button
                     }
 
-                    // Chama a função de salvar no ViewModel
                     viewModel.salvarHospede(
-                        id = hospedeId, // Passa o ID existente para atualização
+                        id = hospedeId,
                         nome = nome,
                         cpf = cpf,
                         email = email,

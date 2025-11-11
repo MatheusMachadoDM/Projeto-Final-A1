@@ -3,19 +3,21 @@ package com.example.reservashotel.ui.view.screens
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.navigation.NavController
 import com.example.reservashotel.ui.viewmodel.ReservaViewModel
-import com.example.reservashotel.data.model.Reserva // Certifique-se deste import se o seu código usa 'reserva'
 
 // =========================================================================
-// FUNÇÕES AUXILIARES (DE FORA DO @Composable)
+// FUNÇÕES AUXILIARES
 // =========================================================================
 
 fun parseDateStringToMillis(dateStr: String): Long {
@@ -37,18 +39,27 @@ fun formatMillisToDateString(millis: Long): String {
     }
 }
 
+// Função de extensão para capitalizar a primeira letra (Substitui capitalize())
+fun String.toTitleCase(): String {
+    return if (this.isNotBlank()) {
+        this.replaceFirstChar {
+            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+        }
+    } else this
+}
+
 // =========================================================================
 // TELA COMPOSABLE
 // =========================================================================
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FormReservaScreen(
     navController: NavController,
     viewModel: ReservaViewModel,
     reservaId: String? = null
 ) {
-    // ESTADOS DOS CAMPOS (serão preenchidos se for edição)
+    // ESTADOS DOS CAMPOS
     var quartoId by remember { mutableStateOf("") }
     var hospedeId by remember { mutableStateOf("") }
     var nomeCliente by remember { mutableStateOf("") }
@@ -56,12 +67,21 @@ fun FormReservaScreen(
     var dataCheckOut by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("ativa") }
 
-    // VARIÁVEL DE CONTROLE para evitar que o carregamento se repita
-    val dadosCarregados = remember { mutableStateOf(false) }
+    // ESTADOS PARA DROPDOWN E DATE PICKERS
+    var expandedStatus by remember { mutableStateOf(false) }
+    val statusOptions = listOf("ativa", "concluída", "cancelada")
 
+    var showCheckInPicker by remember { mutableStateOf(false) }
+    var showCheckOutPicker by remember { mutableStateOf(false) }
+
+    val dadosCarregados = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    // LÓGICA DE CARREGAMENTO DE DADOS (USANDO LaunchedEffect)
+    // --- 1. Estado para os Milissegundos Iniciais (para o DatePicker) ---
+    val initialCheckInMillis = remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val initialCheckOutMillis = remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    // LÓGICA DE CARREGAMENTO DE DADOS (Edição)
     LaunchedEffect(reservaId, dadosCarregados.value) {
         if (reservaId != null && !dadosCarregados.value) {
             val reservaExistente = viewModel.carregarReservaPorId(reservaId)
@@ -70,27 +90,93 @@ fun FormReservaScreen(
                 quartoId = reserva.quartoId
                 hospedeId = reserva.hospedeId
                 nomeCliente = reserva.nomeCliente
+
                 dataCheckIn = formatMillisToDateString(reserva.dataCheckIn)
                 dataCheckOut = formatMillisToDateString(reserva.dataCheckOut)
-                status = reserva.status
 
+                // Atualiza o estado de Long para re-inicializar o DatePickerState
+                initialCheckInMillis.longValue = reserva.dataCheckIn
+                initialCheckOutMillis.longValue = reserva.dataCheckOut
+
+                status = reserva.status
                 dadosCarregados.value = true
             }
         }
     }
 
-    // ESTRUTURA DA UI
+    // --- 2. Date Picker Dialogs (Correção do Locale e do remember(key)) ---
+
+    // CORREÇÃO: Usamos remember(key) e adicionamos locale = Locale.getDefault()
+    val datePickerStateIn = remember(initialCheckInMillis.longValue) {
+        DatePickerState(
+            initialSelectedDateMillis = initialCheckInMillis.longValue,
+            initialDisplayMode = DisplayMode.Picker,
+            initialDisplayedMonthMillis = initialCheckInMillis.longValue,
+            locale = Locale.getDefault()
+        )
+    }
+
+    // CORREÇÃO: Repetimos a lógica para o Check-out
+    val datePickerStateOut = remember(initialCheckOutMillis.longValue) {
+        DatePickerState(
+            initialSelectedDateMillis = initialCheckOutMillis.longValue,
+            initialDisplayMode = DisplayMode.Picker,
+            initialDisplayedMonthMillis = initialCheckOutMillis.longValue,
+            locale = Locale.getDefault()
+        )
+    }
+
+    // --- 3. Diálogos de Calendário ---
+
+    if (showCheckInPicker) {
+        DatePickerDialog(
+            onDismissRequest = { showCheckInPicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerStateIn.selectedDateMillis?.let { millis ->
+                            dataCheckIn = formatMillisToDateString(millis)
+                            initialCheckInMillis.longValue = millis
+                        }
+                        showCheckInPicker = false
+                    }
+                ) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCheckInPicker = false }) { Text("Cancelar") }
+            }
+        ) { DatePicker(state = datePickerStateIn) }
+    }
+
+    if (showCheckOutPicker) {
+        DatePickerDialog(
+            onDismissRequest = { showCheckOutPicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerStateOut.selectedDateMillis?.let { millis ->
+                            dataCheckOut = formatMillisToDateString(millis)
+                            initialCheckOutMillis.longValue = millis
+                        }
+                        showCheckOutPicker = false
+                    }
+                ) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCheckOutPicker = false }) { Text("Cancelar") }
+            }
+        ) { DatePicker(state = datePickerStateOut) }
+    }
+
+
+    // --- ESTRUTURA DA UI ---
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(if (reservaId == null) "Nova Reserva" else "Editar Reserva") },
-                // 🌟 NOVO: Botão de Cancelar/Voltar (Navigation Icon)
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = "Cancelar e Voltar"
-                        )
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Cancelar e Voltar")
                     }
                 }
             )
@@ -104,24 +190,34 @@ fun FormReservaScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            // =========================
-            // CAMPOS DE TEXTO
-            // =========================
-
+            // 1. ID DO QUARTO
             OutlinedTextField(
                 value = quartoId,
                 onValueChange = { quartoId = it },
                 label = { Text("ID do Quarto") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
 
+            // 2. ID DO HÓSPEDE
             OutlinedTextField(
                 value = hospedeId,
-                onValueChange = { hospedeId = it },
+                onValueChange = {
+                    hospedeId = it
+                    // LÓGICA DE BUSCA REATIVA
+                    if (it.isNotBlank() && reservaId == null) {
+                        scope.launch {
+                            val nome = viewModel.buscarNomeHospede(it)
+                            if (nome != null) nomeCliente = nome
+                        }
+                    }
+                },
                 label = { Text("ID do Hóspede") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
 
+            // 3. NOME DO CLIENTE
             OutlinedTextField(
                 value = nomeCliente,
                 onValueChange = { nomeCliente = it },
@@ -129,40 +225,74 @@ fun FormReservaScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            // 4. DATA CHECK-IN (Seletor de Data)
             OutlinedTextField(
                 value = dataCheckIn,
-                onValueChange = { dataCheckIn = it },
-                label = { Text("Data Check-in (yyyy-MM-dd)") },
-                modifier = Modifier.fillMaxWidth()
+                onValueChange = { /* Não permite edição direta */ },
+                readOnly = true,
+                label = { Text("Data Check-in: ${dataCheckIn}") },
+                trailingIcon = { Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(0.dp)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showCheckInPicker = true }
             )
 
+            // 5. DATA CHECK-OUT (Seletor de Data)
             OutlinedTextField(
                 value = dataCheckOut,
-                onValueChange = { dataCheckOut = it },
-                label = { Text("Data Check-out (yyyy-MM-dd)") },
-                modifier = Modifier.fillMaxWidth()
+                onValueChange = { /* Não permite edição direta */ },
+                readOnly = true,
+                label = { Text("Data Check-out: ${dataCheckOut}") },
+                trailingIcon = { Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(0.dp)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showCheckOutPicker = true }
             )
 
-            OutlinedTextField(
-                value = status,
-                onValueChange = { status = it },
-                label = { Text("Status (Ativa/Concluída/Cancelada)") },
+            // 6. STATUS (Menu Suspenso)
+            ExposedDropdownMenuBox(
+                expanded = expandedStatus,
+                onExpandedChange = { expandedStatus = !expandedStatus },
                 modifier = Modifier.fillMaxWidth()
-            )
+            ) {
+                OutlinedTextField(
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    readOnly = true,
+                    // Usando a função toTitleCase()
+                    value = status.toTitleCase(),
+                    onValueChange = { },
+                    label = { Text("Status") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStatus) },
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedStatus,
+                    onDismissRequest = { expandedStatus = false }
+                ) {
+                    statusOptions.forEach { selectionOption ->
+                        DropdownMenuItem(
+                            // Usando a função toTitleCase()
+                            text = { Text(selectionOption.toTitleCase()) },
+                            onClick = {
+                                status = selectionOption
+                                expandedStatus = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             // =========================
             // BOTÃO SALVAR
             // =========================
-
             Button(
                 onClick = {
                     val inMillis = parseDateStringToMillis(dataCheckIn)
                     val outMillis = parseDateStringToMillis(dataCheckOut)
 
-                    if (nomeCliente.isBlank() || quartoId.isBlank() || inMillis == 0L || outMillis == 0L) {
-                        // (Adicionar lógica de validação aqui, ex: um Snackbar)
+                    if (nomeCliente.isBlank() || quartoId.isBlank() || hospedeId.isBlank() || inMillis == 0L || outMillis == 0L) {
                         return@Button
                     }
 
@@ -173,9 +303,8 @@ fun FormReservaScreen(
                         nomeCliente = nomeCliente,
                         dataCheckIn = inMillis,
                         dataCheckOut = outMillis,
-                        status = status
+                        status = status.lowercase(Locale.getDefault())
                     )
-
                     navController.popBackStack()
                 },
                 modifier = Modifier.fillMaxWidth()

@@ -5,13 +5,17 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.reservashotel.data.model.Reserva
 import com.example.reservashotel.data.repository.ReservasRepository
+import com.example.reservashotel.data.repository.HospedesRepository // ⬅️ NOVO: Importe o Repositório de Hóspedes
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class ReservaViewModel(private val repository: ReservasRepository) : ViewModel() {
+class ReservaViewModel(
+    private val repository: ReservasRepository,
+    // 🌟 1. NOVO: Injete o Repositório de Hóspedes
+    private val hospedesRepository: HospedesRepository
+) : ViewModel() {
 
-    // Expõe a lista como StateFlow, observando o repositório (correto para Compose)
     val listaReservas = repository.getAllReservas()
         .stateIn(
             scope = viewModelScope,
@@ -21,7 +25,6 @@ class ReservaViewModel(private val repository: ReservasRepository) : ViewModel()
 
     /**
      * Salva (cria ou atualiza) uma reserva.
-     * Constrói o objeto Reserva antes de chamar o Repositório.
      */
     fun salvarReserva(
         id: String? = null,
@@ -33,7 +36,6 @@ class ReservaViewModel(private val repository: ReservasRepository) : ViewModel()
         status: String
     ) {
         viewModelScope.launch {
-            // 1. CONSTRÓI O OBJETO RESERVA AQUI
             val reserva = Reserva(
                 id = id ?: "",
                 quartoId = quartoId,
@@ -44,14 +46,11 @@ class ReservaViewModel(private val repository: ReservasRepository) : ViewModel()
                 status = status
             )
 
-            // 2. DELEGA A LÓGICA DE PERSISTÊNCIA AO REPOSITÓRIO
             if (id.isNullOrBlank()) {
                 repository.addReserva(reserva)
             } else {
                 repository.updateReserva(reserva)
             }
-
-            // NOTA: A validação de conflito de datas (RF12) deve vir aqui antes de salvar
         }
     }
 
@@ -66,12 +65,31 @@ class ReservaViewModel(private val repository: ReservasRepository) : ViewModel()
         return repository.getReservaById(id)
     }
 
-    // Factory
-    class Factory(private val repository: ReservasRepository) : ViewModelProvider.Factory {
+    //  2. NOVO: Função para busca reativa do nome do hóspede
+    /**
+     * Busca o nome do hóspede pelo ID. Usada para preenchimento automático na UI.
+     */
+    suspend fun buscarNomeHospede(id: String): String? {
+        // Converte o ID de String (da UI) para Int (do modelo de dados Hospede)
+        val idInt = id.toIntOrNull() ?: return null
+
+        // Chama o Repositório de Hóspedes injetado para buscar
+        val hospede = hospedesRepository.getHospedeById(idInt)
+
+        return hospede?.nome
+    }
+
+
+    //  3. CORREÇÃO DO FACTORY: Deve aceitar ambos os Repositórios
+    class Factory(
+        private val reservasRepository: ReservasRepository,
+        private val hospedesRepository: HospedesRepository 
+    ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(ReservaViewModel::class.java)) {
                 @Suppress("UNCHECKED_CAST")
-                return ReservaViewModel(repository) as T
+                // Passa AMBOS os repositórios para o construtor
+                return ReservaViewModel(reservasRepository, hospedesRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

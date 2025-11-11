@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
             QuartoViewModel.Factory(quartosRepository)
         }
         val reservaViewModel: ReservaViewModel by viewModels {
-            ReservaViewModel.Factory(reservasRepository)
+            ReservaViewModel.Factory(reservasRepository = reservasRepository, hospedesRepository = hospedesRepository)
         }
 
         // 🌟 NOVO: ViewModel de Hóspedes

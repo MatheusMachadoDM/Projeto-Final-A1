@@ -1,6 +1,8 @@
 package com.example.reservashotel.ui.view.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -9,8 +11,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.reservashotel.ui.viewmodel.QuartoViewModel
-import com.example.reservashotel.data.model.Quarto // Importe sua classe de modelo Quarto
+import com.example.reservashotel.data.model.Quarto
 import kotlinx.coroutines.launch
+import androidx.compose.ui.text.input.KeyboardType
+
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -19,33 +23,28 @@ fun FormQuartoScreen(
     viewModel: QuartoViewModel,
     quartoId: String? = null
 ) {
-    // ESTADOS DOS CAMPOS
+    // ... (Estados, Dropdowns, e Lógica de Carregamento permanecem iguais) ...
     var numero by remember { mutableStateOf("") }
-    var tipo by remember { mutableStateOf("") }
+    var tipo by remember { mutableStateOf("Casal") }
     var valorDiaria by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("Disponível") }
-
-    // Variável de controle para garantir que o carregamento só ocorra uma vez
+    var expandedTipo by remember { mutableStateOf(false) }
+    var expandedStatus by remember { mutableStateOf(false) }
+    val tipos = listOf("Casal", "Solteiro")
+    val statusOptions = listOf("Disponível", "Ocupado")
     val dadosCarregados = remember { mutableStateOf(false) }
-
     val scope = rememberCoroutineScope()
 
-
-    // --- Carregamento de Dados para Edição ---
     LaunchedEffect(quartoId, dadosCarregados.value) {
         if (quartoId != null && !dadosCarregados.value) {
             scope.launch {
-                // Supondo que você tem esta função no QuartoViewModel
                 val quartoExistente = viewModel.carregarQuartoPorId(quartoId)
-
                 quartoExistente?.let { quarto ->
-                    // Preenche os estados com os dados carregados
                     numero = quarto.numero.toString()
                     tipo = quarto.tipo
                     valorDiaria = quarto.valorDiaria.toString()
                     status = quarto.status
-
-                    dadosCarregados.value = true // Marca como carregado
+                    dadosCarregados.value = true
                 }
             }
         }
@@ -57,13 +56,9 @@ fun FormQuartoScreen(
         topBar = {
             TopAppBar(
                 title = { Text(if (quartoId == null) "Novo Quarto" else "Editar Quarto") },
-                // 🌟 NOVO: Botão de Cancelar/Voltar (Navigation Icon)
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = "Cancelar e Voltar"
-                        )
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Cancelar e Voltar")
                     }
                 }
             )
@@ -77,54 +72,101 @@ fun FormQuartoScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            // ... (Campos de Texto) ...
-
+            // 1. CAMPO NÚMERO DO QUARTO
             OutlinedTextField(
                 value = numero,
                 onValueChange = { numero = it },
                 label = { Text("Número do Quarto") },
+                // 🛠️ NOVO: Define o teclado como numérico
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
 
-            OutlinedTextField(
-                value = tipo,
-                onValueChange = { tipo = it },
-                label = { Text("Tipo (ex: Casal, Solteiro)") },
+            // 2. CAMPO TIPO (Menu Suspenso - Permanece igual)
+            ExposedDropdownMenuBox(
+                expanded = expandedTipo,
+                onExpandedChange = { expandedTipo = !expandedTipo },
                 modifier = Modifier.fillMaxWidth()
-            )
+            ) {
+                OutlinedTextField(
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    readOnly = true,
+                    value = tipo,
+                    onValueChange = { },
+                    label = { Text("Tipo") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTipo) },
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedTipo,
+                    onDismissRequest = { expandedTipo = false }
+                ) {
+                    tipos.forEach { selectionOption ->
+                        DropdownMenuItem(
+                            text = { Text(selectionOption) },
+                            onClick = {
+                                tipo = selectionOption
+                                expandedTipo = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                        )
+                    }
+                }
+            }
 
-            // Campo valorDiaria
+            // 3. CAMPO VALOR DA DIÁRIA
             OutlinedTextField(
                 value = valorDiaria,
                 onValueChange = { valorDiaria = it },
                 label = { Text("Valor da Diária") },
+                // Define o teclado como numérico (com decimal)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth()
             )
 
-            OutlinedTextField(
-                value = status,
-                onValueChange = { status = it },
-                label = { Text("Status (Disponível/Ocupado)") },
+            // 4. CAMPO STATUS (Menu Suspenso - Permanece igual)
+            ExposedDropdownMenuBox(
+                expanded = expandedStatus,
+                onExpandedChange = { expandedStatus = !expandedStatus },
                 modifier = Modifier.fillMaxWidth()
-            )
+            ) {
+                OutlinedTextField(
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    readOnly = true,
+                    value = status,
+                    onValueChange = { },
+                    label = { Text("Status") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStatus) },
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedStatus,
+                    onDismissRequest = { expandedStatus = false }
+                ) {
+                    statusOptions.forEach { selectionOption ->
+                        DropdownMenuItem(
+                            text = { Text(selectionOption) },
+                            onClick = {
+                                status = selectionOption
+                                expandedStatus = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // ... (Botão Salvar) ...
-
             Button(
                 onClick = {
-                    // Validação simples de preenchimento e conversão
                     if (numero.isBlank() || tipo.isBlank() || valorDiaria.toDoubleOrNull() == null) {
-                        // Adicionar lógica de validação aqui
                         return@Button
                     }
 
                     viewModel.salvarQuarto(
-                        id = quartoId, // Passa o ID existente para atualizar
+                        id = quartoId,
                         numero = numero,
                         tipo = tipo,
-                        // Converte a String de volta para Double para salvar
                         valorDiaria = valorDiaria.toDoubleOrNull() ?: 0.0,
                         status = status
                     )
