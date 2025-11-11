@@ -70,6 +70,7 @@ fun ListaHospedesScreen(
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text("Nome: ${hospede.nome}", style = MaterialTheme.typography.titleMedium)
+                                Text("Id: ${hospede.id}")
                                 Text("CPF: ${hospede.cpf}")
                                 Text("Telefone: ${hospede.telefone}")
 

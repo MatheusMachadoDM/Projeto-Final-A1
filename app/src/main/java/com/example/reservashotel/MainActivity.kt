@@ -17,11 +17,13 @@ import com.example.reservashotel.data.database.AppDatabase
 import com.example.reservashotel.data.repository.HospedesRepository
 import com.example.reservashotel.data.repository.ReservasRepository
 import com.example.reservashotel.data.repository.QuartosRepository
+import com.example.reservashotel.data.repository.UsuariosRepository
 import com.example.reservashotel.ui.theme.ReservasHotelTheme
 import com.example.reservashotel.ui.view.screens.*
 import com.example.reservashotel.ui.viewmodel.HospedeViewModel
 import com.example.reservashotel.ui.viewmodel.QuartoViewModel
 import com.example.reservashotel.ui.viewmodel.ReservaViewModel
+import com.example.reservashotel.ui.viewmodel.UsuarioViewModel
 import com.google.firebase.firestore.FirebaseFirestore
 
 class MainActivity : ComponentActivity() {
@@ -49,9 +51,12 @@ class MainActivity : ComponentActivity() {
             firestore = firestore
         )
 
-        // 🌟 NOVO: Repositório de Hóspedes
         val hospedesRepository = HospedesRepository(
-            hospedeDao = db.hospedeDao() // Presume que AppDatabase tem a função hospedeDao()
+            hospedeDao = db.hospedeDao()
+        )
+
+        val usuariosRepository = UsuariosRepository(
+            usuarioDao = db.usuarioDao()
         )
 
         // --- 4. Inicialização dos ViewModels ---
@@ -62,9 +67,12 @@ class MainActivity : ComponentActivity() {
             ReservaViewModel.Factory(reservasRepository = reservasRepository, hospedesRepository = hospedesRepository)
         }
 
-        // 🌟 NOVO: ViewModel de Hóspedes
         val hospedeViewModel: HospedeViewModel by viewModels {
-            HospedeViewModel.Factory(hospedesRepository) // Injeta HospedesRepository
+            HospedeViewModel.Factory(hospedesRepository)
+        }
+
+        val usuarioViewModel: UsuarioViewModel by viewModels {
+            UsuarioViewModel.Factory(usuariosRepository = usuariosRepository)
         }
 
         setContent {
@@ -73,7 +81,8 @@ class MainActivity : ComponentActivity() {
                     AppNavigation(
                         quartoViewModel = quartoViewModel,
                         reservaViewModel = reservaViewModel,
-                        hospedeViewModel = hospedeViewModel // 🌟 NOVO: Passando o ViewModel de Hóspedes
+                        hospedeViewModel = hospedeViewModel,
+                        usuarioViewModel = usuarioViewModel
                     )
                 }
             }
@@ -86,13 +95,14 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation(
     quartoViewModel: QuartoViewModel,
     reservaViewModel: ReservaViewModel,
-    hospedeViewModel: HospedeViewModel // 🌟 NOVO: Recebendo o ViewModel de Hóspedes
+    hospedeViewModel: HospedeViewModel,
+    usuarioViewModel: UsuarioViewModel
 ) {
     val navController = rememberNavController()
 
     NavHost(
         navController = navController,
-        startDestination = "home"
+        startDestination = "login_screen"
     ) {
         composable("home") {
             HomeScreen(navController)
@@ -147,6 +157,8 @@ fun AppNavigation(
             FormHospedeScreen(navController, hospedeViewModel, id)
         }
 
-        // Rotas para Login/Logout devem ser adicionadas aqui futuramente
+        composable("login_screen") {
+            LoginScreen(navController, usuarioViewModel)
+        }
     }
 }

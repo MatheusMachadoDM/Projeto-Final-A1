@@ -43,20 +43,19 @@ fun HomeScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { navController.navigate("lista_reservas") },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Gerenciar Reservas")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 🌟 NOVO BOTÃO PARA A TELA DE HÓSPEDES
-            Button(
                 onClick = { navController.navigate("lista_hospedes") },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Gerenciar Hóspedes")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = { navController.navigate("lista_reservas") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Gerenciar Reservas")
             }
         }
     }

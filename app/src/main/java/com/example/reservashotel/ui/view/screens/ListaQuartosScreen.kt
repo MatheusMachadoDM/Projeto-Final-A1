@@ -74,8 +74,8 @@ fun ListaQuartosScreen(
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text("Número: ${quarto.numero}", style = MaterialTheme.typography.titleMedium)
+                                Text("Id: ${quarto.id}")
                                 Text("Tipo: ${quarto.tipo}")
-                                // Formatar para moeda seria uma boa prática
                                 Text("Valor diária: R$${quarto.valorDiaria}")
                                 Text("Status: ${quarto.status}")
 
