@@ -1,37 +1,54 @@
 package com.example.reservashotel.ui.viewmodel
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.reservashotel.data.model.Quarto
-import com.example.reservashotel.data.repository.QuartosRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
+import androidx.lifecycle.ViewModel // Classe base do Androidx ViewModel.
+import androidx.lifecycle.viewModelScope // Extensão para coroutines ligadas ao ciclo de vida do ViewModel.
+import com.example.reservashotel.data.model.Quarto // Modelo de dados da entidade.
+import com.example.reservashotel.data.repository.QuartosRepository // Repositório da camada de dados.
+import kotlinx.coroutines.flow.MutableStateFlow // Implementação mutável do Flow.
+import kotlinx.coroutines.flow.StateFlow // Versão imutável do Flow (melhor para expor o estado).
+import kotlinx.coroutines.launch // Inicia uma coroutine.
 
+/**
+ * ViewModel responsável por gerenciar e expor os dados da entidade Quarto para a UI.
+ * Implementa a lógica de negócios e se comunica com o Repositório.
+ *
+ * @param repository O Repositório de Quartos injetado para acesso aos dados.
+ */
 class QuartoViewModel(private val repository: QuartosRepository) : ViewModel() {
 
+    // --- Gerenciamento de Estado Reativo ---
+
+    // Estado interno (mutável) da lista de quartos. Atualizado pelo ViewModel.
     private val _listaQuartos = MutableStateFlow<List<Quarto>>(emptyList())
+
+    // Estado externo (imutável) que a UI observa (StateFlow).
     val listaQuartos: StateFlow<List<Quarto>> = _listaQuartos
 
+    /**
+     * Bloco de inicialização. Chamado assim que a instância do ViewModel é criada.
+     */
     init {
-        // Agora carrega e observa o Flow corrigido
+        // Inicia o carregamento dos quartos para preencher a lista inicial.
         carregarQuartos()
     }
 
     /**
-     * Carrega todos os quartos observando o Flow do repositório
+     * Carrega todos os quartos observando o Flow do repositório.
      */
     fun carregarQuartos() {
+        // Inicia uma coroutine no escopo do ViewModel.
         viewModelScope.launch {
-            // O QuartoRepository.getAllQuartos() agora retorna Flow, permitindo o collect
+            // O QuartoRepository.getAllQuartos() retorna Flow (reativo), permitindo o 'collect'.
+            // 'collect' recebe cada nova lista emitida pelo Room/Repository.
             repository.getAllQuartos().collect { quartos ->
-                _listaQuartos.value = quartos
+                _listaQuartos.value = quartos // Atualiza o estado reativo (_listaQuartos).
             }
         }
     }
 
     /**
-     * Salva ou atualiza um quarto
+     * Salva (cria) ou atualiza um quarto existente.
+     * Recebe os campos do formulário (UI).
      */
     fun salvarQuarto(
         id: String? = null,
@@ -41,49 +58,59 @@ class QuartoViewModel(private val repository: QuartosRepository) : ViewModel() {
         status: String
     ) {
         viewModelScope.launch {
-            // CORRIGIDO: O id é Int no modelo, deve ser convertido ou 0 se for novo.
+            // CORRIGIDO: O ID do modelo Quarto é Int. Converte o ID String (da navegação) para Int.
+            // Se o ID for nulo (novo quarto) ou falhar na conversão, usa 0 (que ativa o autoGenerate no Room).
             val quartoIdInt = id?.toIntOrNull() ?: 0
 
+            // Constrói o objeto Quarto a ser salvo.
             val quarto = Quarto(
-                id = quartoIdInt, // id é 0 para inserção ou o id existente para atualização
-                numero = numero.toIntOrNull() ?: 0, // Garante que numero é Int
+                id = quartoIdInt, // 0 para inserção ou ID existente para atualização.
+                numero = numero.toIntOrNull() ?: 0, // Converte String (do TextField) para Int.
                 tipo = tipo,
                 valorDiaria = valorDiaria,
                 status = status
             )
 
-            // CORRIGIDO: Chama a nova assinatura que recebe o objeto Quarto
+            // Delega a operação de persistência ao Repositório.
             repository.addOrUpdateQuarto(quarto)
         }
     }
 
     /**
-     * Exclui um quarto
+     * Exclui um quarto.
      */
     fun excluirQuarto(quarto: Quarto) {
         viewModelScope.launch {
-            // CORRIGIDO: Renomeado para a função correta do Repository
+            // Chama a função de exclusão no Repositório.
             repository.excluirQuarto(quarto)
         }
     }
 
     /**
-     * Factory para usar com ViewModelProvider
+     * Carrega um quarto específico pelo seu ID. Usado principalmente para preencher
+     * o formulário na tela de edição (FormQuartoScreen).
+     *
+     * @param id ID do quarto (como String, vindo da navegação).
+     * @return O objeto Quarto ou null.
+     */
+    suspend fun carregarQuartoPorId(id: String): Quarto? {
+        return repository.getQuartoById(id)
+    }
+
+    /**
+     * Factory (Fábrica) para criar instâncias do QuartoViewModel com dependências.
+     * Essencial para injetar o Repositório no ViewModel, pois ele possui um construtor com parâmetros.
      */
     class Factory(private val repository: QuartosRepository) :
         androidx.lifecycle.ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            // Verifica se a classe pedida é a QuartoViewModel.
             if (modelClass.isAssignableFrom(QuartoViewModel::class.java)) {
                 @Suppress("UNCHECKED_CAST")
-                // ATENÇÃO: Se estiver usando ReservasRepository na MainActivity,
-                // você pode precisar renomear o tipo do parâmetro da Factory.
+                // Cria e retorna a instância do ViewModel, passando o Repositório.
                 return QuartoViewModel(repository as QuartosRepository) as T
             }
             throw IllegalArgumentException("Classe ViewModel desconhecida")
         }
-    }
-
-    suspend fun carregarQuartoPorId(id: String): Quarto? {
-        return repository.getQuartoById(id)
     }
 }

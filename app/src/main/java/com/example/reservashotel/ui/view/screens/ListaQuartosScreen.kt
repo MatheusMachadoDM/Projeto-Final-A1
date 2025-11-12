@@ -15,22 +15,32 @@ import androidx.navigation.NavController
 import com.example.reservashotel.data.model.Quarto
 import com.example.reservashotel.ui.viewmodel.QuartoViewModel
 
+/**
+ * Tela de listagem de quartos. Permite visualizar, editar e excluir quartos cadastrados.
+ *
+ * @param navController Controlador de navegação.
+ * @param viewModel O ViewModel que gerencia os dados de Quartos.
+ */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun ListaQuartosScreen(
     navController: NavController,
     viewModel: QuartoViewModel
 ) {
-    // Coleta a lista de quartos de forma reativa
+    // Coleta a lista de quartos (Flow) do ViewModel como um State.
+    // Isso garante que a UI seja atualizada automaticamente (reativamente) sempre que a lista mudar no banco de dados.
     val listaQuartos by viewModel.listaQuartos.collectAsState()
 
     Scaffold(
+        // O Scaffold fornece a estrutura básica (TopBar, Content, FAB, etc.).
+
         // 1. TOP BAR COM BOTÃO DE VOLTAR
         topBar = {
             TopAppBar(
                 title = { Text("Quartos") },
-                // Adiciona o ícone de voltar no canto superior esquerdo
+                // Adiciona o ícone de voltar no canto superior esquerdo (Navigation Icon).
                 navigationIcon = {
+                    // Retorna para a tela anterior na pilha de navegação (HomeScreen).
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             imageVector = Icons.Filled.ArrowBack,
@@ -38,34 +48,41 @@ fun ListaQuartosScreen(
                         )
                     }
                 },
-                // Remove o botão "Novo" daqui
+                // A seção de ações (canto direito) foi deixada vazia, movendo o botão 'Novo' para o FAB.
                 actions = { /* Deixado vazio ou para outras ações */ }
             )
         },
+
         // 2. FLOATING ACTION BUTTON (FAB) na parte inferior
         floatingActionButton = {
+            // Botão flutuante para iniciar a navegação para a tela de cadastro.
             FloatingActionButton(onClick = { navController.navigate("form_quarto") }) {
                 Icon(Icons.Filled.Add, contentDescription = "Adicionar Novo Quarto")
             }
         }
     ) { padding ->
+        // O Box serve como um contêiner que pode centralizar elementos.
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(padding) // Aplica o padding fornecido pelo Scaffold (TopBar/FAB)
         ) {
+            // Condicional: Se a lista estiver vazia, exibe uma mensagem no centro.
             if (listaQuartos.isEmpty()) {
                 Text(
                     text = "Nenhum quarto cadastrado.",
                     modifier = Modifier.align(Alignment.Center)
                 )
             } else {
+                // LazyColumn é usado para renderizar listas grandes de forma eficiente.
+                // Ele só compõe os itens que estão visíveis na tela.
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp) // Espaçamento entre os cards.
                 ) {
+                    // Itera sobre a lista de quartos.
                     items(listaQuartos) { quarto ->
                         Card(
                             modifier = Modifier
@@ -73,6 +90,7 @@ fun ListaQuartosScreen(
                                 .padding(4.dp)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
+                                // Exibição dos dados do quarto.
                                 Text("Número: ${quarto.numero}", style = MaterialTheme.typography.titleMedium)
                                 Text("Id: ${quarto.id}")
                                 Text("Tipo: ${quarto.tipo}")
@@ -81,15 +99,19 @@ fun ListaQuartosScreen(
 
                                 Spacer(modifier = Modifier.height(8.dp))
 
+                                // --- Botões de Ação ---
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Button(
-                                        // Navega para a tela de formulário, passando o ID do quarto para edição
+                                        // Navega para a tela de formulário, passando o ID do quarto como parâmetro
+                                        // para indicar que é uma operação de EDIÇÃO.
                                         onClick = { navController.navigate("form_quarto?id=${quarto.id}") },
                                         modifier = Modifier.weight(1f)
                                     ) {
                                         Text("Editar")
                                     }
                                     Button(
+                                        // Chama a função do ViewModel para deletar o quarto.
+                                        // Idealmente, deve-se adicionar uma confirmação (AlertDialog) aqui.
                                         onClick = { viewModel.excluirQuarto(quarto) },
                                         modifier = Modifier.weight(1f)
                                     ) {
