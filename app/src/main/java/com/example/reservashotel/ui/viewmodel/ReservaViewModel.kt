@@ -5,16 +5,29 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.reservashotel.data.model.Reserva
 import com.example.reservashotel.data.repository.ReservasRepository
-import com.example.reservashotel.data.repository.HospedesRepository // ⬅️ NOVO: Importe o Repositório de Hóspedes
+import com.example.reservashotel.data.repository.HospedesRepository
+import com.example.reservashotel.data.repository.QuartosRepository
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ReservaViewModel(
     private val repository: ReservasRepository,
-    // 🌟 1. NOVO: Injete o Repositório de Hóspedes
-    private val hospedesRepository: HospedesRepository
+    private val hospedesRepository: HospedesRepository,
+    private val quartosRepository: QuartosRepository
 ) : ViewModel() {
+
+    private val _mensagemErro = MutableStateFlow<String?>(null)
+    val mensagemErro: StateFlow<String?> = _mensagemErro.asStateFlow()
+
+    fun limparMensagemErro() {
+        _mensagemErro.value = null
+    }
 
     val listaReservas = repository.getAllReservas()
         .stateIn(
@@ -24,9 +37,9 @@ class ReservaViewModel(
         )
 
     /**
-     * Salva (cria ou atualiza) uma reserva.
+     * Salva (cria ou atualiza) uma reserva com validações.
      */
-    fun salvarReserva(
+    suspend fun salvarReserva(
         id: String? = null,
         quartoId: String,
         hospedeId: String,
@@ -35,7 +48,32 @@ class ReservaViewModel(
         dataCheckOut: Long,
         status: String
     ) {
+        // Limpa o erro anterior antes de uma nova tentativa
+        _mensagemErro.value = null
+
         viewModelScope.launch {
+
+            // 1. VALIDAÇÃO DE REGRA DE NEGÓCIO: Datas
+            if (dataCheckOut <= dataCheckIn) {
+                _mensagemErro.value = "A data de Check-out deve ser posterior à data de Check-in."
+                return@launch
+            }
+
+            // 2. VALIDAÇÃO DE EXISTÊNCIA: Hóspede
+            val nomeHospedeExistente = buscarNomeHospede(hospedeId)
+            if (nomeHospedeExistente == null) {
+                _mensagemErro.value = "Hóspede com ID '$hospedeId' não encontrado. Verifique o cadastro."
+                return@launch
+            }
+
+            // 3. VALIDAÇÃO DE EXISTÊNCIA: Quarto
+            val quarto = quartosRepository.getQuartoById(quartoId)
+            if (quarto == null) {
+                _mensagemErro.value = "Quarto com ID '$quartoId' não encontrado. Verifique o cadastro."
+                return@launch
+            }
+
+            // 4. Se todas as validações passarem, prossegue com o salvamento
             val reserva = Reserva(
                 id = id ?: "",
                 quartoId = quartoId,
@@ -52,6 +90,8 @@ class ReservaViewModel(
                 repository.updateReserva(reserva)
             }
         }
+
+        _navegarDeVolta.emit(Unit)
     }
 
     fun excluirReserva(reserva: Reserva) {
@@ -60,38 +100,30 @@ class ReservaViewModel(
         }
     }
 
-    // Função de carregamento para a tela de edição
     suspend fun carregarReservaPorId(id: String): Reserva? {
         return repository.getReservaById(id)
     }
 
-    //  2. NOVO: Função para busca reativa do nome do hóspede
-    /**
-     * Busca o nome do hóspede pelo ID. Usada para preenchimento automático na UI.
-     */
     suspend fun buscarNomeHospede(id: String): String? {
-        // Converte o ID de String (da UI) para Int (do modelo de dados Hospede)
         val idInt = id.toIntOrNull() ?: return null
-
-        // Chama o Repositório de Hóspedes injetado para buscar
         val hospede = hospedesRepository.getHospedeById(idInt)
-
         return hospede?.nome
     }
 
-
-    //  3. CORREÇÃO DO FACTORY: Deve aceitar ambos os Repositórios
     class Factory(
         private val reservasRepository: ReservasRepository,
-        private val hospedesRepository: HospedesRepository 
+        private val hospedesRepository: HospedesRepository,
+        private val quartosRepository: QuartosRepository
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(ReservaViewModel::class.java)) {
                 @Suppress("UNCHECKED_CAST")
-                // Passa AMBOS os repositórios para o construtor
-                return ReservaViewModel(reservasRepository, hospedesRepository) as T
+                return ReservaViewModel(reservasRepository, hospedesRepository, quartosRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }
     }
+
+    private val _navegarDeVolta = MutableSharedFlow<Unit>()
+    val navegarDeVolta = _navegarDeVolta.asSharedFlow()
 }

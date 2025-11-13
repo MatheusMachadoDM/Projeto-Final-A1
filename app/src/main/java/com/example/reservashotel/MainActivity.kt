@@ -64,7 +64,7 @@ class MainActivity : ComponentActivity() {
             QuartoViewModel.Factory(quartosRepository)
         }
         val reservaViewModel: ReservaViewModel by viewModels {
-            ReservaViewModel.Factory(reservasRepository = reservasRepository, hospedesRepository = hospedesRepository)
+            ReservaViewModel.Factory(reservasRepository = reservasRepository, hospedesRepository = hospedesRepository, quartosRepository = quartosRepository)
         }
 
         val hospedeViewModel: HospedeViewModel by viewModels {
@@ -105,7 +105,7 @@ fun AppNavigation(
         startDestination = "login_screen"
     ) {
         composable("home") {
-            HomeScreen(navController)
+            HomeScreen(navController, usuarioViewModel)
         }
 
         // --- Quartos ---
@@ -140,7 +140,6 @@ fun AppNavigation(
             FormReservaScreen(navController, reservaViewModel, id)
         }
 
-        // 🌟 NOVAS ROTAS PARA HÓSPEDES
         composable("lista_hospedes") {
             ListaHospedesScreen(navController, hospedeViewModel)
         }

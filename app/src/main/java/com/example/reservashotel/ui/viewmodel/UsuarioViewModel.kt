@@ -80,4 +80,9 @@ class UsuarioViewModel(
             throw IllegalArgumentException("Unknown ViewModel class")
         }
     }
+
+    fun logout() {
+        _loginSucesso.value = false
+        _mensagemErro.value = null
+    }
 }

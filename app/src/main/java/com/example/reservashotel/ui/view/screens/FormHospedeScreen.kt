@@ -14,7 +14,7 @@ import com.example.reservashotel.data.model.Hospede
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.input.KeyboardType
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FormHospedeScreen(
     navController: NavController,
@@ -27,9 +27,12 @@ fun FormHospedeScreen(
     var email by remember { mutableStateOf("") }
     var telefone by remember { mutableStateOf("") }
 
-    // ... (Lógica de carregamento e estados permanecem iguais) ...
+    // ESTADOS DE CONTROLE
     val dadosCarregados = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
 
     LaunchedEffect(hospedeId, dadosCarregados.value) {
         if (hospedeId != null && !dadosCarregados.value) {
@@ -49,6 +52,7 @@ fun FormHospedeScreen(
 
     // --- Estrutura da UI ---
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(if (hospedeId == null) "Novo Hóspede" else "Editar Hóspede") },
@@ -80,11 +84,9 @@ fun FormHospedeScreen(
             OutlinedTextField(
                 value = cpf,
                 onValueChange = {
-                    // DICA: Adicionar um filtro aqui para aceitar APENAS dígitos.
                     if (it.length <= 11) cpf = it
                 },
                 label = { Text("CPF") },
-                // 🛠️ NOVO: Teclado numérico (ideal para CPF e Telefone)
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -94,7 +96,6 @@ fun FormHospedeScreen(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("E-mail") },
-                // 🛠️ NOVO: Teclado otimizado para e-mail (inclui @ e .)
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -102,12 +103,8 @@ fun FormHospedeScreen(
             // 4. Campo Telefone
             OutlinedTextField(
                 value = telefone,
-                onValueChange = {
-                    // DICA: Adicionar um filtro aqui para aceitar APENAS dígitos.
-                    telefone = it
-                },
+                onValueChange = { telefone = it },
                 label = { Text("Telefone") },
-                // 🛠️ NOVO: Teclado numérico
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -118,6 +115,15 @@ fun FormHospedeScreen(
             Button(
                 onClick = {
                     if (nome.isBlank() || cpf.isBlank() || telefone.isBlank()) {
+
+                        // Exibe o Snackbar se a validação falhar
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "Preencha os campos Nome, CPF e Telefone.",
+                                actionLabel = "OK",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
                         return@Button
                     }
 

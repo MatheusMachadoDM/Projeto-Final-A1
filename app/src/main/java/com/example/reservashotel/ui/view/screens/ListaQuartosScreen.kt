@@ -21,7 +21,7 @@ import com.example.reservashotel.ui.viewmodel.QuartoViewModel
  * @param navController Controlador de navegação.
  * @param viewModel O ViewModel que gerencia os dados de Quartos.
  */
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListaQuartosScreen(
     navController: NavController,
@@ -30,6 +30,12 @@ fun ListaQuartosScreen(
     // Coleta a lista de quartos (Flow) do ViewModel como um State.
     // Isso garante que a UI seja atualizada automaticamente (reativamente) sempre que a lista mudar no banco de dados.
     val listaQuartos by viewModel.listaQuartos.collectAsState()
+
+    // 🌟 NOVO ESTADO: Armazena o quarto que será excluído
+    var quartoParaExcluir by remember { mutableStateOf<Quarto?>(null) }
+
+    // 🌟 NOVO ESTADO: Controla a visibilidade do popup de confirmação
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         // O Scaffold fornece a estrutura básica (TopBar, Content, FAB, etc.).
@@ -110,9 +116,10 @@ fun ListaQuartosScreen(
                                         Text("Editar")
                                     }
                                     Button(
-                                        // Chama a função do ViewModel para deletar o quarto.
-                                        // Idealmente, deve-se adicionar uma confirmação (AlertDialog) aqui.
-                                        onClick = { viewModel.excluirQuarto(quarto) },
+                                        onClick = {
+                                            quartoParaExcluir = quarto // Armazena o quarto a ser excluído
+                                            showDeleteDialog = true // Abre o diálogo
+                                        },
                                         modifier = Modifier.weight(1f)
                                     ) {
                                         Text("Excluir")
@@ -124,5 +131,44 @@ fun ListaQuartosScreen(
                 }
             }
         }
+    }
+
+
+    if (showDeleteDialog && quartoParaExcluir != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteDialog = false
+                quartoParaExcluir = null
+            },
+            title = {
+                Text(text = "Confirmar Exclusão")
+            },
+            text = {
+                // Exibe o número do quarto para confirmação
+                Text(text = "Tem certeza que deseja excluir o quarto ${quartoParaExcluir!!.numero}?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.excluirQuarto(quartoParaExcluir!!)
+                        showDeleteDialog = false
+                        quartoParaExcluir = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Excluir")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        quartoParaExcluir = null
+                    }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
