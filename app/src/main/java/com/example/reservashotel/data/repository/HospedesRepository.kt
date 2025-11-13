@@ -10,7 +10,6 @@ class HospedesRepository(private val hospedeDao: HospedeDao) {
         return hospedeDao.getAll()
     }
 
-    // 🌟 NOVO: Função para buscar o Hóspede por ID
     suspend fun getHospedeById(id: Int): Hospede? {
         return hospedeDao.getHospedeById(id)
     }

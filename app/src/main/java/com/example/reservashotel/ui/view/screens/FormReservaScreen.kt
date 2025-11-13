@@ -64,11 +64,11 @@ fun FormReservaScreen(
     var nomeCliente by remember { mutableStateOf("") }
     var dataCheckIn by remember { mutableStateOf("") }
     var dataCheckOut by remember { mutableStateOf("") }
-    var status by remember { mutableStateOf("ativa") }
+    var status by remember { mutableStateOf("Ativa") }
 
     // ESTADOS PARA DROPDOWN E DATE PICKERS
     var expandedStatus by remember { mutableStateOf(false) }
-    val statusOptions = listOf("ativa", "concluída", "cancelada")
+    val statusOptions = listOf("Ativa", "Concluída", "Cancelada", "Em Andamento")
 
     val dadosCarregados = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()

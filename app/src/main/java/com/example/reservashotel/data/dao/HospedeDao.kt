@@ -17,7 +17,7 @@ interface HospedeDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(hospede: Hospede)
 
-    @Update // ⬅️ Adicione isto!
+    @Update
     suspend fun update(hospede: Hospede)
 
     @Delete

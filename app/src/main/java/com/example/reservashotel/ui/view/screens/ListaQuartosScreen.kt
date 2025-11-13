@@ -31,10 +31,8 @@ fun ListaQuartosScreen(
     // Isso garante que a UI seja atualizada automaticamente (reativamente) sempre que a lista mudar no banco de dados.
     val listaQuartos by viewModel.listaQuartos.collectAsState()
 
-    // 🌟 NOVO ESTADO: Armazena o quarto que será excluído
     var quartoParaExcluir by remember { mutableStateOf<Quarto?>(null) }
 
-    // 🌟 NOVO ESTADO: Controla a visibilidade do popup de confirmação
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(

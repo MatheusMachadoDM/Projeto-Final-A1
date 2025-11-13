@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.Flow // Importa a classe Flow para programação 
 @Dao
 interface QuartoDao {
 
-    // CORRIGIDO: Retorna Flow<List<Quarto>> para reatividade
     /**
      * Retorna todos os quartos do banco de dados.
      * O uso de Flow<List<Quarto>> permite que a UI observe as mudanças
